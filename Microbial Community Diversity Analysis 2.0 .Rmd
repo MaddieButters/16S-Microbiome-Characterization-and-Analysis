@@ -1,0 +1,432 @@
+---
+title: "Microbial Community Diversity Analysis v1"
+author: "M. Butterfield"
+date: "2/24/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+chooseCRANmirror(graphics=FALSE, ind=1)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#Loading Libraries
+install.packages("ggplot2")
+library(ggplot2)
+install.packages("vegan")
+library(vegan)
+install.packages("dplyr")
+library(dplyr)
+library(scales)
+library(grid)
+library(reshape2)
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("phyloseq", version = "3.8")
+library(phyloseq)
+```
+
+```{r}
+setwd("~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis")
+#Data Import
+sharedfile="~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/turtle.shared"
+taxfile="~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/turtle.taxonomy"
+mapfile="~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/TurtleMetadata.csv"
+
+#Import Mothur Data
+mothur_data<-import_mothur(mothur_shared_file = sharedfile, mothur_constaxonomy_file = taxfile)
+#Import Metadata
+map<-read.csv(mapfile)
+head(map)
+map<-sample_data(map)
+rownames(map)<-map$SampleID
+
+#Merge Metadata with Phyloseq
+moth_merge<-merge_phyloseq(mothur_data, map)
+moth_merge #OTU table: 15244 taxa and 17 samples; Sample Data: 17 samples by 12 sample variables; Taxonomy Table: 15244 taxa by 6 taxonomic ranks
+
+#Changing Column Names into Taxa Levels
+colnames(tax_table(moth_merge))
+colnames(tax_table(moth_merge))<-c("Kingdom","Phylum","Class","Order","Family","Genus")
+colnames(tax_table(moth_merge)) #confirmation
+turtle<-moth_merge %>% 
+  subset_taxa(
+    Kingdom == "Bacteria" &
+    Family !="mitochondria" &
+    Class != "chloroplast"
+  )
+turtle #OTU table: 15244 taxa and 17 samples; sample data: 17 samples by 12 sample variables; Taxonomy Tables: 15244 taxa by 6 taxonomic ranks
+```
+
+```{r}
+#Sample Summary
+
+#Data frame for number of read counts per sample
+sample_sum_df<-data.frame(sum=sample_sums(turtle))
+
+#Histogram of Read Counts
+ggplot(sample_sum_df, aes(x=sum)) +
+  geom_histogram(color="black",fill="red4",binwidth=2500)+
+  ggtitle("Distribution of Sample Sequencing Depth")+xlab("Read Counts")+
+  theme(axis.title.y=element_blank())
+
+#Summary of Data
+smin<-min(sample_sums(turtle)) #46292
+smean<-mean(sample_sums(turtle)) #51412.3529411765
+smax<-max(sample_sums(turtle)) #64400
+
+#Stacked Barplot
+#pruning out phyla that comprise less than 2% community in each sample
+turtle_phylum<-turtle %>% 
+  tax_glom(taxrank="Phylum") %>% #agglomerate (?) at phylum level
+  transform_sample_counts(function(x) {x/sum(x)}) %>% #transform amounts to relative abundance
+  psmelt() %>% #melting to long format (rolling with it)
+  filter(Abundance>0.02) %>% #Filtering out taxa below 2% for each sample
+  arrange(Phylum) #sort data alphabetically by phylum
+
+#Setting up Colors for Barplot
+phylum_colors<-c(
+  "navyblue","cornflowerblue","cornsilk2","darkslategray1","cadetblue4","dimgrey","grey89","orange3","darkseagreen","aquamarine4","lightcoral","thistle3","hotpink3","paleturquoise3","darkolivegreen4","royalblue1"
+)
+
+#Community Composition Barplot - no title
+ggplot(turtle_phylum,aes(x=Number,y=Abundance, fill=Phylum))+
+  facet_grid(Location~.)+
+  scale_fill_manual(values=phylum_colors)+
+  geom_bar(stat="identity")+
+  ylab("Relative Abundance (Phyla > 2%) \n")+
+  guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) +
+  xlab("Sample")+
+  scale_x_discrete(
+    breaks=c("6/30/17","7/18/17","7/27/17"),
+    labels=c("Vermillion","James","Goat Island"),
+    drop=FALSE)
+```
+
+```{r}
+#Unconstrained Ordinations
+source("~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/miseqR.R.txt") #from https://github.com/DenefLab/MicrobeMiseq/blob/97bb501de9d8c7e5926dfc72027aa20123e976e6/R/miseqR.R
+turtle_scale<-turtle%>%
+  scale_reads(round="round")
+
+#Fix Location Levels in Data
+sample_data(turtle_scale)$Date<-factor(
+  sample_data(turtle_scale)$Date,
+  levels=c("6/30/17","7/18/17","7/27/17")
+)
+
+#PCoA Unconstrained Ordination Setup
+turtle_pcoa<-ordinate(
+  physeq=turtle_scale,
+  method="PCoA",
+  distance="bray"
+)
+
+#PCoA Unconstrained Ordination Plot
+plot_ordination(
+  physeq=turtle_scale,
+  ordination=turtle_pcoa,
+  color="Date",
+  shape="Location",
+  title="PCoA of False Map Turtle Bacterial Communities"
+) +
+  scale_color_manual(values=c("blue","gold","red1")
+) +
+  geom_point(aes(color=Date),alpha=0.7,size=4)+
+  geom_point(aes(shape=Location),color="grey35",size=1.5)
+```
+
+```{r}
+###NMDS
+set.seed(1)
+
+#Ordinate
+turtle_nmds<-ordinate(
+  physeq=turtle_scale,
+  method="NMDS",
+  distance="bray"
+)
+
+#Plot
+plot_ordination(
+  physeq=turtle_scale,
+  ordination=turtle_nmds,
+  color="Date",
+  shape="Location",
+  title="NMDS of False Map Turtle Bacterial Communities"
+) +
+  scale_color_manual(values=c("brown3","blue2","darkgoldenrod1")
+) +
+  geom_point(aes(color=Date),alpha=0.7,size=4)
+  geom_point(colour="grey35",size=1.5)
+```
+
+
+```{r}
+###NMDS No date, just location
+set.seed(1)
+
+#Ordinate
+turtle_nmds1<-ordinate(
+  physeq=turtle_scale,
+  method="NMDS",
+  distance="bray"
+)
+
+#Plot
+plot_ordination(
+  physeq=turtle_scale,
+  ordination=turtle_nmds1,
+  color="Location",
+  title="NMDS of False Map Turtle Bacterial Communities"
+) +
+  scale_color_manual(values=c("brown3","blue2","darkgoldenrod1","darkgreen","darkviolet","gray7")
+) +
+  geom_point(aes(color=Location),alpha=0.7,size=4)
+  geom_point(colour="grey35",size=1.5)
+```
+
+```{r}
+#Constrained Ordinations
+turtle_not_na<-turtle_scale %>%
+  subset_samples(
+    !is.na(WaterTemp) &
+      !is.na(WaterpH) &
+      !is.na(Conductivity) &
+      !is.na(Barometric) &
+      !is.na(DissolvedO2) &
+      !is.na(DissolvedO2mgc)
+  )
+
+bray_not_na<-phyloseq::distance(physeq=turtle_not_na,method="bray")
+
+#CAP Ordinate
+cap_ord<-ordinate(
+  physeq=turtle_not_na,
+  method="CAP",
+  distance=bray_not_na,
+  formula=~WaterTemp+WaterpH+Conductivity+Barometric+DissolvedO2+DissolvedO2mgc
+)
+
+#CAP Constrained Ordination Plot (having trouble)
+cap_plot<-plot_ordination(
+  physeq=turtle_not_na,
+  ordination=cap_ord,
+    color="Date",
+    axes=c(1,2)
+  )+
+  (geom_point(aes(Shape = Location),color="grey35",size=1.5)) + 
+    geom_point(aes(colour = Date), alpha = 0.4, size = 4)+ 
+    scale_color_manual(values = c("red", "darkorchid3", "magenta")
+    )
+
+#Environmental variables being added
+arrowmat<-vegan::scores(cap_ord,display="bp")
+
+#Arrow dataframe + labels
+arrowdf<-data.frame(labels=rownames(arrowmat),arrowmat)
+
+#Arrow Aesthetic Mapping Defining
+arrow_map<-aes(xend=CAP1,
+  yend=CAP2,
+  x=0,
+  y=0,
+  shape=NULL,
+  color=NULL,
+  label=labels)
+
+label_map<-aes(x=1.3*CAP1,
+  y=1.3*CAP2,
+  shape=NULL,
+  color=NULL,
+  label=labels)
+
+arrowhead=arrow(length=unit(0.02,"npc"))
+
+#Production of Constrained Ordination Plot + Arrows
+cap_plot + 
+  geom_segment(
+    mapping = arrow_map, 
+    size = .5, 
+    data = arrowdf, 
+    color = "gray", 
+    arrow = arrowhead
+  ) + 
+  geom_text(
+    mapping = label_map, 
+    size = 4,  
+    data = arrowdf, 
+    show.legend = FALSE
+  )
+
+#ANOVA
+anova(cap_ord) #Model: DF=4, SoS=1.1813, F=1.4447, Pr(>F)=0.021; Residual: DF=11, SoS=2.2486
+```
+
+
+```{r}
+###Alpha Diversity - subsampling the library with replacement
+
+min_lab<-min(sample_sums(turtle)) #46292
+
+#Initialize matrices
+nsamp=nsamples(turtle)
+trials=100
+
+richness<-matrix(nrow=nsamp,ncol=trials)
+row.names(richness)<-sample_names(turtle)
+
+evenness<-matrix(nrow=nsamp,ncol=trials)
+row.names(richness)<-sample_names(turtle)
+
+#Setting Seed, making sure it's replicable
+set.seed(3)
+
+for(i in 1:100){
+  #Subsample
+  r<-rarefy_even_depth(turtle,sample.size=46292,verbose=FALSE,replace=TRUE)
+
+
+#Calculate Richness
+rich<-as.numeric(as.matrix(estimate_richness(r,measures="Observed")))
+richness[,i]<-rich
+
+#Calculate Evenness
+even<-as.numeric(as.matrix(estimate_richness(r,measures="InvSimpson")))
+evenness[,i]<-even
+}
+
+
+#New Dataframe for Means, SD
+SampleID<-row.names(richness)
+mean<-apply(richness,1,mean)
+sd<-apply(richness,1,sd)
+measure<-rep("Richness",nsamp)
+rich_stats<-data.frame(SampleID,mean,sd,measure)
+rich_stats
+
+SampleID1<-row.names(evenness)
+mean1<-apply(evenness,1,mean)
+sd1<-apply(evenness,1,sd)
+measure1<-rep("Inverse Simpson",nsamp)
+even_stats<-data.frame(SampleID1,mean1,sd1,measure1)
+even_stats
+
+#One Matrix of Evenness and Richness
+alpha<-rbind(rich_stats,even_stats)
+
+#Adding Sample Data to Dataframe
+s<-data.frame(sample_data(turtle))
+alphadiv<-merge(alpha,s,by="SampleID")
+
+#Order the Data
+alphadiv<-order_dates(alphadiv) #didn't work
+
+#Plot Alpha Diversity
+ggplot(alphadiv,aes(x=Date,y=mean,color=Location,group=Location,shape=Location))+
+  geom_point(size=2)+
+  geom_line(size=0.8)+
+  facet_wrap(~measure,ncol=1,scales="free")+
+  scale_color_manual(values=c("brown1","gray1","steelblue1"))+
+  scale_x_discrete(
+    breaks=c("7/18/17","7/27/17","6/30/17"),
+    labels=c("early July","late July","June"),
+    drop=FALSE
+  )+
+  theme(
+    axis.title.x=element_blank(),
+    axis.title.y=element_blank()
+  )
+
+```
+
+
+
+```{r}
+###PERMANOVA
+set.seed(1)
+
+#Calculate Bray Curtis Distance Matrix
+turtle_bray<-phyloseq::distance(turtle_scale,method="bray")
+
+#Creating Dataframe from Sample_data
+sampledf <- data.frame(sample_data(turtle))
+
+#Adonis Test
+adonis(turtle_bray ~ Location, data = sampledf) #RSq = 0.2306 (Location), 0.76932 (Residuals); P=0.001
+
+#Homogeneity of Dispersion Test
+beta <- betadisper(turtle_bray, sampledf$Location)
+permutest(beta) #F=41.936, P=0.001
+
+
+
+###PERMANOVA without Goat###
+
+#Setting up No Goat Dataframe#
+setwd("~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis")
+sharedfile="~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/turtle.shared"
+taxfile="~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/turtle.taxonomy"
+mapfilenogoat="~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/TurtleMetadataNoGoat.csv"
+
+#Import Mothur Data
+mothur_data_nogoat<-import_mothur(mothur_shared_file = sharedfile, mothur_constaxonomy_file = taxfile)
+#Import Metadata
+mapnogoat<-read.csv(mapfilenogoat)
+head(mapnogoat)
+mapnogoat<-sample_data(mapnogoat)
+rownames(mapnogoat)<-mapnogoat$SampleID
+
+#Merge Metadata with Phyloseq
+moth_merge_nogoat<-merge_phyloseq(mothur_data_nogoat, mapnogoat)
+moth_merge_nogoat #OTU Table: 15244 taxa and 16 samples, Sample Data: 16 samlpes by 14 variables, Taxonomy Table: 15244 taxa by 6 taxonomic ranks
+
+#Changing Column Names into Taxa Levels
+colnames(tax_table(moth_merge_nogoat))
+colnames(tax_table(moth_merge_nogoat))<-c("Kingdom","Phylum","Class","Order","Family","Genus")
+colnames(tax_table(moth_merge_nogoat)) #confirmation
+turtlenogoat<-moth_merge_nogoat %>% 
+  subset_taxa(
+    Kingdom == "Bacteria" &
+    Family !="mitochondria" &
+    Class != "chloroplast"
+  )
+turtlenogoat #OTU Table: 15244 taxa and 16 samples, Sample Data: 16 samples by 14 sample variables, Taxonomy Table: 15244 taxa by 6 taxonomic ranks
+
+source("~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/miseqR.R.txt") #from https://github.com/DenefLab/MicrobeMiseq/blob/97bb501de9d8c7e5926dfc72027aa20123e976e6/R/miseqR.R
+turtle_scale_nogoat<-turtlenogoat%>%
+  scale_reads(round="round")
+
+#Fix Location Levels in Data
+sample_data(turtle_scale_nogoat)$Date<-factor(
+  sample_data(turtle_scale_nogoat)$Date,
+  levels=c("6/30/17","7/18/17")
+)
+
+```
+```{r}
+###PERMANOVA No Goat###
+set.seed(1)
+
+#Calculate Bray Curtis Distance Matrix
+turtle_bray_nogoat<-phyloseq::distance(turtle_scale_nogoat,method="bray")
+
+#Creating Dataframe from Sample_data
+sampledfnogoat <- data.frame(sample_data(turtlenogoat))
+
+#Adonis Test
+adonis(turtle_bray_nogoat ~ Location, data = sampledfnogoat) #Df: Location = 1, Residuals = 14. Sum of Sqs: Location = 0.6071, Residuals = 2.8229, Total = 3.4300. Rsquared: Location = 0.17699, Residuals = 0.82301. F-value = 3.0108. p value = 0.001.
+
+#Homogeneity of Dispersion Test
+betanogoat <- betadisper(turtle_bray_nogoat, sampledfnogoat$Location)
+permutest(betanogoat) #F=4.9691, P=0.051, Df = 1, Sum Sq = 0.010328, 999 Permutations
+
+
+```
+
+
+```
+
+

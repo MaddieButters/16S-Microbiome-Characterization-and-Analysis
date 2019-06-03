@@ -1,0 +1,54 @@
+---
+title: "R Notebook"
+output:
+  word_document: default
+  html_notebook: default
+editor_options:
+  chunk_output_type: inline
+---
+```{r}
+setwd("~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/Urine Analysis")
+
+###Actinobacteria
+peed<-read.csv("Actinobacteria.csv",header=T)
+attach(peed)
+
+#Two-sample T Test - Actinobacteria
+t.test(Proportion~Peed,data=peed,var.equal=TRUE) #t=0.49899, df=4, p=0.644
+
+###Bacteroidetes
+bacteroidetes<-read.csv("Bacteriodetes.csv", header=T)
+#Two-sample T Test 
+t.test(bacteroidetes$Proportion~bacteroidetes$Peed,var.equal=TRUE) #t=-0.47853, df=4, p=0.6573
+
+###Chloroflexi
+chloroflexi<-read.csv("Chloroflexi.csv",header=T)
+#Two-sample T Test
+t.test(chloroflexi$Proportion~chloroflexi$Peed,var.equal=TRUE) #t= -0.17339, df=4, p=0.8708
+
+###Deinococcus
+deinococcus<-read.csv("Deinococcus.csv",header=T)
+#Two-sample T Test
+t.test(deinococcus$Proportion~deinococcus$Peed, var.equal=TRUE) #t=-0.60297, df=4, p=0.579
+
+###Firmicutes
+firmicute<-read.csv("Firmicutes.csv",header=T)
+#Two-sample T Test
+t.test(firmicute$Proportion~firmicute$Peed,var.equal=TRUE) #t=1.984, df=4, p=0.1183
+
+###Fusobacteria
+fusobacteria<-read.csv("Fusobacteria.csv",header=T)
+#Two-sample T Test
+t.test(fusobacteria$Proportion~fusobacteria$Peed,var.equal=TRUE) #t=-1, df=4, p=0.3739
+
+###Patescibacteria
+patescibacteria<-read.csv("Patescibacteria.csv",header=T)
+#Two-sample T Test
+t.test(patescibacteria$Proportion~patescibacteria$Peed, var.equal=TRUE) #t=-2.0255, df=4, p=0.1128
+
+###Proteobacteria
+proteobacteria<-read.csv("Proteobacteria.csv",header=T)
+t.test(proteobacteria$Proportion~proteobacteria$Peed,var.equal=TRUE) #t=0.56155, df=4, p=0.6044
+```
+
+

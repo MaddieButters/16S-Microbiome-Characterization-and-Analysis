@@ -1,0 +1,114 @@
+---
+title: "ANOVA of Water Quality"
+author: "M. Butterfield"
+date: "4/10/2019"
+output: word_document
+---
+```{r}
+###Import Water Quality Data
+setwd("~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis")
+qualityfile="~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/WaterQuality.csv"
+quality<-read.csv(qualityfile)
+head(quality)
+
+###ANOVA
+
+##Temperature Significance
+temp<-aov(WaterTemp~Location,data=quality)
+summary(temp) #F=157.4, P=5.09E-10
+#R Squared
+tempAnova<-lm(WaterTemp~Location, data=quality)
+tempAnovasummary<-summary(tempAnova)
+tempAnovasummary$r.squared #0.9025057
+
+##pH Significance
+pH<-aov(WaterpH~Location, data=quality)
+summary(pH) #F=2962, P=<2E-16
+#R Squared
+pHAnova<-lm(WaterpH~Location, data=quality)
+pHAnovasummary<-summary(pHAnova)
+pHAnovasummary$r.squared #0.9942943
+
+##Conductivity Significance
+conductivity<-aov(Conductivity~Location, data=quality)
+summary(conductivity) #F=18776, p=<2E-16
+#R Squared
+conductivityAnova<-lm(Conductivity~Location, data=quality)
+conductivityAnovasummary<-summary(conductivityAnova)
+conductivityAnovasummary$r.squared #0.9990954
+
+##Barometric Pressure Significance
+barometric<-aov(BarometricPressure~Location, data=quality)
+summary(barometric) #F=1.461E+27, p=<2E-16
+#R Squared
+barometricAnova<-lm(BarometricPressure~Location, data=quality)
+barometricAnovasummary<-summary(barometricAnova)
+barometricAnovasummary$r.squared #1
+
+##Dissolved O2 (mg/L) Significance
+o2<-aov(DissolvedO2~Location, data=quality)
+summary(o2) #F=591.5, p=1.2E-14
+#R Squared
+o2Anova<-lm(DissolvedO2~Location, data=quality)
+o2Anovasummary<-summary(o2Anova)
+o2Anovasummary$r.squared #0.972064
+
+##Dissolved O2 (mg/c) Significance
+o2mgc<-aov(DissolvedO2mgc~Location, data=quality)
+summary(o2mgc) #F=978.2, p=<2E-16
+#R Squared
+o2mgcAnova<-lm(DissolvedO2mgc~Location, data=quality)
+o2mgcAnovasummary<-summary(o2mgcAnova)
+o2mgcAnovasummary$r.squared #.9829188
+```
+
+```{r}
+#Boxplots for ANOVA
+boxplot(DissolvedO2~Location,data=quality)
+plot(DissolvedO2~Location, data=quality)
+
+###Can we get all of the anova plots together in one chart? Let's ~SEE~
+
+#Water Temperature Boxplot
+boxplot(WaterTemp~Location, data=quality,
+        main="Water Temperature",
+        ylim=c(20,32),
+        xlab="Trapping Site", ylab="Temperature in Celsius")
+
+#pH Boxplot
+boxplot(WaterpH~Location, data=quality, 
+        main="Water pH", 
+        ylim=c(8,8.6),
+        xlab="Trapping Site",ylab="pH")
+#Stats of pH Boxplot
+b<-boxplot(WaterpH~Location, data=quality)
+b
+
+#Water Conductivity Boxplot
+boxplot(Conductivity~Location, data=quality, 
+        main="Water Conductivity",
+        ylim=c(1500,2000),
+        xlab="Trapping Site",ylab="Conductivity (Siemens/m)")
+c<-boxplot(Conductivity~Location, data=quality)
+c
+
+#Barometric Pressure Boxplot
+boxplot(BarometricPressure~Location, data=quality,
+        main="Barometric Pressure",
+        ylim=c(725,734),
+        xlab="Trapping Sites", ylab="Barometric Pressure (psi)")
+
+#Dissolved O2 Boxplot
+boxplot(DissolvedO2~Location, data=quality, main="Dissolved O2", 
+        ylab="Dissolved O2 (mg/L)", xlab="Trapping Sites",
+        ylim=c(50,250))
+
+#Dissolved O2 (mg/c) Boxplot
+boxplot(DissolvedO2mgc~Location, data=quality,
+        main="Dissolved O2 (mg/c)",
+        xlab="Trapping Sites", ylab="Dissolved O2 (mg/c)",
+        ylim=c(5,20))
+
+
+```
+

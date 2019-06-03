@@ -1,0 +1,33 @@
+---
+title: "Analyzing Environmental Data"
+author: "M. Butterfield"
+date: "3/14/2019"
+output: word_document
+---
+
+```{r}
+setwd("~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis")
+environment<-read.csv("TurtleMetadata.csv",header=T)
+head(environment)
+plot(WaterTemp~WaterpH,data=environment,main="Water Temperature as a \nFunction of Water pH",ylab="Water Temperature (Celsius)",xlab="Water pH")
+attach(environment)
+TemppHcor<-cor.test(WaterpH,WaterTemp,method="spearman") #p-value=3.87e-9; estimate=0.936
+detach(environment)
+
+plot(Conductivity~WaterTemp,data=environment,ylab="Water Conductivity (us/cm)",xlab="Water Temperature (Celsius)",main="Water Conductivity as a\n Function of Water Temperature")
+attach(environment)
+conductTempreg<-lm(Conductivity~WaterTemp,data=environment)
+summary(conductTempreg)
+  #t value - (intercept=26.54),(WaterTemp=-11.77)
+  #R squared: Multiple R sq=0.8907, adjusted R sq=0.8842
+  #F statistic=138.5 on 1 and 17 df, p-value=1.356e-09
+  #Reject Ho that they're not related.
+abline(conductTempreg,col="red")
+
+detach(environment)
+```
+
+```{r}
+
+```
+
