@@ -1,0 +1,119 @@
+```{r}
+#Load Libraries
+library(ggplot2)
+library(vegan)
+library(dplyr)
+library(scales)
+library(grid)
+library(reshape2)
+library(phyloseq)
+
+#Set Working Directory
+setwd("~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis")
+
+#Data Import
+sharedfile = "~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/turtle.shared"
+taxfile = "~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/turtle.taxonomy"
+mapfile = "~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/TurtleMetadata3.csv"
+
+#Import mothur data
+mothur_data <-import_mothur(mothur_shared_file = sharedfile, mothur_constaxonomy_file = taxfile)
+
+#Import sample metadata
+map<-read.csv(mapfile)
+map
+map<-sample_data(map)
+
+#Assign rownames to be Sample ID's
+rownames(map)<-map$SampleID
+```
+
+```{r}
+#Merge mothurdata object with sample metadata
+moth_merge<-merge_phyloseq(mothur_data,map)
+moth_merge
+map
+mothur_data
+###^This step is where we lose 3 Vermillion samples: 7702, 5025, 6700. mothur_data = 30 samples, map=30 samples. moth_merge = 27 samples.
+
+#Setting Phyla Level Names
+colnames(tax_table(moth_merge))
+colnames(tax_table(moth_merge))<-c("Kingdom", "Phylum","Class", "Order", "Family", "Genus")
+
+
+#Data Filter
+turtle<-moth_merge %>%
+  subset_taxa(
+    Kingdom == "Bacteria" &
+    Family  != "mitochondria" &
+    Class   != "Chloroplast"
+  )
+
+```
+
+```{r}
+###Alpha Diversity
+min_lib<-min(sample_sums(turtle))
+
+#Initialize matrices to store richness and evenness estimates
+nsamp=nsamples(turtle)
+trials=100
+
+richness<-matrix(nrow=nsamp,ncol=trials)
+row.names(richness)<-sample_names(turtle)
+
+evenness<-matrix(nrow=nsamp,ncol=trials)
+row.names(evenness)<-sample_names(turtle)
+
+#Set seed
+set.seed(3)
+
+for(i in 1:100) {
+  #Subsample
+  r<-rarefy_even_depth(turtle, sample.size=min_lib,verbose=FALSE,replace=TRUE)
+  #Calculate Richness
+  rich<-as.numeric(as.matrix(estimate_richness(r,measures="Observed")))
+  richness[ ,i]<-rich
+  #Calculate Evenness
+  even<-as.numeric(as.matrix(estimate_richness(r,measures="InvSimpson")))
+  evenness[ ,i]<-even
+}
+
+##Mean, Std Dev per sample for observed richness
+#New dataframe for mean, std dev of richness est
+SampleID<-row.names(richness)
+mean1<-apply(richness,1,mean)
+sd1<-apply(richness,1,sd)
+measure<-rep("Richness",nsamp)
+rich_stats<-data.frame(SampleID,mean1,sd1,measure)
+
+#New dataframe for mean, std dev of evenness est
+SampleID<-row.names(evenness)
+mean1<-apply(evenness,1,mean)
+sd1<-apply(evenness,1,sd)
+measure<-rep("Inverse Simpson",nsamp)
+even_stats<-data.frame(SampleID,mean1,sd1,measure)
+
+#Combine estimates for richness, evenness
+alpha<-rbind(rich_stats,even_stats)
+
+#Add in sample metadata
+s<-data.frame(sample_data(turtle))
+alphadiv<-merge(alpha,s,by="SampleID")
+
+##Plot Alpha Diversity
+ggplot(alphadiv,aes(x=Location,y=mean1, color=Sex,group=Sex,shape=Sex))+
+  geom_point(size=2)+
+  geom_line(size=0.8)+
+  facet_wrap(~measure,ncol=1,scales="free")+
+  scale_color_manual(values = c("brown3","dodgerblue3","goldenrod1"))+
+  scale_x_discrete(
+    breaks=c("7/18/17","7/27/17","6/30/17"),
+    labels=c("James River","Goat Island","Vermillion River"),
+    drop=FALSE
+  ) +
+  theme(
+    axis.title.x=element_blank(),
+    axis.title.y=element_blank()
+  )
+```
