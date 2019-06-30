@@ -1,0 +1,172 @@
+```{r}
+#Load Libraries
+library(ggplot2)
+library(vegan)
+library(dplyr)
+library(scales)
+library(grid)
+library(reshape2)
+library(phyloseq)
+
+#Set Working Directory
+setwd("~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis")
+
+#Data Import
+sharedfile = "~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/turtle.shared"
+taxfile = "~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/turtle.taxonomy"
+mapfile = "~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/TurtleMetadata3.csv"
+
+#Import mothur data
+mothur_data <-import_mothur(mothur_shared_file = sharedfile, mothur_constaxonomy_file = taxfile)
+
+#Import sample metadata
+map<-read.csv(mapfile)
+map
+map<-sample_data(map)
+
+#Assign rownames to be Sample ID's
+rownames(map)<-map$SampleID
+```
+
+```{r}
+#Merge mothurdata object with sample metadata
+moth_merge<-merge_phyloseq(mothur_data,map)
+moth_merge
+map
+mothur_data
+###^This step is where we lose 3 Vermillion samples: 7702, 5025, 6700. mothur_data = 30 samples, map=30 samples. moth_merge = 27 samples.
+
+#Setting Phyla Level Names
+colnames(tax_table(moth_merge))
+colnames(tax_table(moth_merge))<-c("Kingdom", "Phylum","Class", "Order", "Family", "Genus")
+
+
+#Data Filter
+turtle<-moth_merge %>%
+  subset_taxa(
+    Kingdom == "Bacteria" &
+    Family  != "mitochondria" &
+    Class   != "Chloroplast"
+  )
+
+```
+
+```{r}
+###Sample Summary
+
+#Data frame with read counts
+sample_sum_df <-data.frame(sum = sample_sums(turtle))
+
+sample_sum_df
+
+smin <-min(sample_sums(turtle))
+smin #42743
+smean <-mean(sample_sums(turtle))
+smean #50307.15
+smax <-max(sample_sums(turtle))
+smax #64400
+```
+
+```{r}
+###Stacked Barplots
+#Prune phyla below 2% in each sample
+turtle_phylum <- turtle %>%
+  tax_glom(taxrank = "Phylum") %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) %>%
+  psmelt () %>%
+  filter(Abundance > 0.02) %>%
+  arrange(Phylum)
+
+#Creating Vermillion-only dataframe
+Vermillion_phylum<-subset(turtle_phylum, turtle_phylum$ Location =="Vermillion")
+
+#Vermillion-only barplot
+ggplot(Vermillion_phylum,aes(x=Sample,y=Abundance,fill=Phylum))+
+  scale_fill_manual(values=c("Verrucomicrobia"="cornflowerblue","Proteobacteria"="dimgrey","Planctomycetes"="darkslategray1","Patescibacteria"="orange3","Fusobacteria"="lightcoral","Firmicutes"="darkseagreen","Deinococcus-Thermus"="paleturquoise3","Cyanobacteria"="grey89","Chloroflexi"="darkolivegreen4","Bacteroidetes"="thistle3","Bacteria_unclassified"="cornsilk2","Actinobacteria"="cadetblue4","Acidobacteria"="hotpink3"))+
+  geom_bar(stat="identity")+
+  guides(fill=guide_legend(reverse=TRUE,keywidth=1,keyheight=1))+
+  xlab("Vermillion River Samples")+
+   ylab("Relative Abundance(>2%) \n")
+
+
+#Creating James River-only dataframe
+James_phylum<-subset(turtle_phylum,turtle_phylum$Location=="JimRiver")
+
+#James-only barplot
+ggplot(James_phylum,aes(x=Sample,y=Abundance,fill=Phylum))+
+  scale_fill_manual(values=c("Verrucomicrobia"="cornflowerblue","Proteobacteria"="dimgrey","Planctomycetes"="darkslategray1","Patescibacteria"="orange3","Fusobacteria"="lightcoral","Firmicutes"="darkseagreen","Deinococcus-Thermus"="paleturquoise3","Cyanobacteria"="grey89","Chloroflexi"="darkolivegreen4","Bacteroidetes"="thistle3","Bacteria_unclassified"="cornsilk2","Actinobacteria"="cadetblue4","Acidobacteria"="hotpink3"))+
+  geom_bar(stat="identity")+
+  guides(fill=guide_legend(reverse=TRUE,keywidth=1,keyheight=1))+
+  ylab("Relative Abundance(>2% \n")+
+  xlab("James River Samples")
+
+
+#Creating Goat Island-only dataframe
+Goat_phylum<-subset(turtle_phylum,turtle_phylum$Location=="Goat")
+
+#Goat-only barplot
+ggplot(Goat_phylum,aes(x=Sample,y=Abundance,fill=Phylum))+
+  scale_fill_manual(values=c("Verrucomicrobia"="cornflowerblue","Proteobacteria"="dimgrey","Planctomycetes"="darkslategray1","Patescibacteria"="orange3","Fusobacteria"="lightcoral","Firmicutes"="darkseagreen","Deinococcus-Thermus"="paleturquoise3","Cyanobacteria"="grey89","Chloroflexi"="darkolivegreen4","Bacteroidetes"="thistle3","Bacteria_unclassified"="cornsilk2","Actinobacteria"="cadetblue4","Acidobacteria"="hotpink3"))+
+  geom_bar(stat="identity")+
+  guides(fill=guide_legend(reverse=TRUE,keywidth=1,keyheight=1))+
+  ylab("Relative Abundance(>2% \n")+
+  xlab("Goat Island Samples")
+
+```
+
+```{r}
+###Unconstrained Ordinations
+
+#Ordinate
+
+myround <- function(x) { trunc(x + 0.5) }
+scale_reads <- function(physeq, n = min(sample_sums(physeq)), round = "floor") {
+  
+  # transform counts to n
+  physeq.scale <- transform_sample_counts(physeq, 
+    function(x) {(n * x/sum(x))}
+  )
+  
+  # Pick the rounding functions
+  if (round == "floor"){
+    otu_table(physeq.scale) <- floor(otu_table(physeq.scale))
+  } else if (round == "round"){
+    otu_table(physeq.scale) <- myround(otu_table(physeq.scale))
+  }
+  
+  # Prune taxa and return new phyloseq object
+  physeq.scale <- prune_taxa(taxa_sums(physeq.scale) > 0, physeq.scale)
+  return(physeq.scale)
+}
+
+###scale_reads from https://github.com/DenefLab/MicrobeMiseq/blob/master/R/miseqR.R
+
+turtle_scale<-turtle %>%
+  scale_reads(round="round")
+
+sample_data(turtle_scale)$Location<-factor(
+  sample_data(turtle_scale)$Location,
+  levels=c("Vermillion","JimRiver","Goat")
+)
+
+#NMDS
+set.seed(1)
+turtle_nmds<-ordinate(
+  physeq=turtle_scale,
+  method="NMDS",
+  distance="bray"
+)
+
+#Plot NMDS
+plot_ordination(
+  physeq=turtle_scale,
+  ordination=turtle_nmds,
+  color="Location",
+  shape="Sex",
+  title="NMDS of Bacterial Communities of NMRR By Sex"
+) +
+  scale_color_manual(values=c("Vermillion"="brown3","JimRiver"="dodgerblue3","Goat"="goldenrod1")
+) + 
+  geom_point(aes(color=Location), alpha=0.7, size=4)+
+  geom_point(colour="grey90",size=1.5)
+```
