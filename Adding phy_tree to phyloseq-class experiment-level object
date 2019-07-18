@@ -1,0 +1,64 @@
+```{r}
+#Load Libraries
+library(ggplot2)
+library(vegan)
+library(dplyr)
+library(scales)
+library(grid)
+library(reshape2)
+library(phyloseq)
+library("ape")
+
+#Set Working Directory
+setwd("~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis")
+
+#Data Import
+sharedfile = "~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/turtle.shared"
+taxfile = "~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/turtle.taxonomy"
+mapfile = "~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/TurtleMetadata4.csv"
+
+#Import mothur data
+mothur_data <-import_mothur(mothur_shared_file = sharedfile, mothur_constaxonomy_file = taxfile)
+
+#Import sample metadata
+map<-read.csv(mapfile)
+map
+map<-sample_data(map)
+
+#Assign rownames to be Sample ID's
+rownames(map)<-map$SampleID
+
+#Check that all row names are in mothur_data
+all(rownames(map) %in% sample_names(mothur_data))
+sample_names(mothur_data)
+```
+
+```{r}
+#Merge mothurdata object with sample metadata
+moth_merge<-merge_phyloseq(mothur_data,map)
+moth_merge
+map
+mothur_data
+
+#Setting Phyla Level Names
+colnames(tax_table(moth_merge))
+colnames(tax_table(moth_merge))<-c("Kingdom", "Phylum","Class", "Order", "Family", "Genus")
+
+#Data Filter
+turtle<-moth_merge %>%
+  subset_taxa(
+    Kingdom == "Bacteria" &
+    Family  != "mitochondria" &
+    Class   != "Chloroplast"
+  )
+
+###Create Phy_tree element
+random_tree=rtree(ntaxa(turtle),rooted=TRUE,tip.label=taxa_names(turtle))
+plot(random_tree)
+turtleTree<-merge_phyloseq(turtle,random_tree)
+turtleTree
+plot_tree(turtleTree,color="Location",label.tips="taxa_names",ladderize="left",plot.margin=0.3)
+#Combine turtle with phy_tree
+turtle<-merge_phyloseq(turtleTree,turtle)
+turtle
+```
