@@ -1,0 +1,124 @@
+```{r}
+#Download Community Composition Information
+setwd("~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/Community Composition Analysis/Second Time")
+#data from each csv file comes from Goat_phylum, James_phylum, and Vermillion_phylum, which are from turtle but are broken up by location. Columns are Location, SampleID, and Proportion, all pulled from that table. 
+```
+
+```{r}
+#Bacteria_unclassified
+bacteria_unclassified<-read.csv("BacteriaUnclass.csv",header=T)
+bacteria_unclassified
+bacun<-aov(Proportion~Location,data=bacteria_unclassified)
+bacun #Sum of Squares - Location: 0.000907424; Residuals: 0.004277720; Deg of Freedom - Location: 2, Residuals: 7
+0.000907424+0.004277720 #Total Sum of squares: 0.005185144
+summary(bacun) #F=0.742, P=0.51
+#R Squared
+bacunAnova<-lm(Proportion~Location, data=bacteria_unclassified)
+bacunAnovasummary<-summary(bacunAnova)
+bacunAnovasummary$r.squared #0.1750046
+```
+
+```{r}
+#Chloroflexi
+chloroflexi<-read.csv("Chloroflexi.csv",header=T)
+chloroflexi
+chlor<-aov(Proportion~Location, data=chloroflexi)
+chlor #Sum of Squares - Location: 0.000448511, Residuals: 0.014804537; Deg of Freedom - Location: 2, Residuals: 17
+0.000448511+0.014804537 #Total sum of squares
+summary(chlor) #F=0.258, P=0.776
+#R Squared
+chlorAnova<-lm(Proportion~Location, data=chloroflexi)
+chlorAnovasummary<-summary(chlorAnova)
+chlorAnovasummary$r.squared #0.02940471
+```
+
+```{r}
+#Deinococcus
+deinococcus<-read.csv("Deinococcus.csv",header=T)
+deinococcus
+dein<-aov(Proportion~Location, data=deinococcus)
+dein #Sum of Squares - Location: 0.001261005, Residuals: 0.005333951; Deg of Freedom - Location: 2, Residuals: 15
+0.001261005+0.005333951 #total sum of squares 
+summary(dein) #F=1.773, P=0.204
+deinAnova<-lm(Proportion~Location, data=deinococcus)
+deinAnovasummary<-summary(deinAnova)
+deinAnovasummary$r.squared #0.1912075
+```
+
+```{r}
+#Patescibacteria
+patescibacteria<-read.csv("Patescibacteria2.csv",header=T)
+patescibacteria
+patesci<-aov(Proportion~Location, data=patescibacteria)
+patesci #Sum of Squares - Location: 0.0007108403, Residuals: 0.0004190379; Deg of Freedom - ocation: 2, Residuals: 6
+0.0007108403+0.0004190379 #total sum of squares
+summary(patesci) #F=5.089, P=0.051
+patescAnova<-lm(Proportion~Location, data=patescibacteria)
+patescAnovasummary<-summary(patescAnova)
+patescAnovasummary$r.squared #0.62913
+```
+
+```{r}
+#Actinobacteria
+actinobacteria<-read.csv("Actinobacteria.csv",header=T)
+actinobacteria
+actino<-aov(Proportion~Location, data=actinobacteria)
+actino #Sum of Squares - Location: 0.001512112, Residuals: 0.012809264; Deg of Freedom - Location: 2, Residuals: 24
+0.001512112+0.012809264 #total sum of squares
+summary(actino) #F=1.417, P=0.262
+actinoAnova<-lm(Proportion~Location,data=actinobacteria)
+actinoAnovasummary<-summary(actinoAnova)
+actinoAnovasummary$r.squared #0.1055843
+```
+
+```{r}
+#Proteobacteria
+proteobacteria<-read.csv("Proteobacteria.csv",header=T)
+proteobacteria
+proteo<-aov(Proportion~Location, data=proteobacteria)
+proteo #Sum of Squares - Location: 0.0620077, Residuals: 0.1465381; Deg of Freedom - Location: 2, Residuals: 24
+0.0620077+0.1465381 #total sum of squares
+summary(proteo) #F=5.078, P=0.0145
+proteoAnova<-lm(Proportion~Location, data=proteobacteria)
+proteoAnovasummary<-summary(proteoAnova)
+proteoAnovasummary$r.squared #0.2973338
+```
+
+```{r}
+#Firmicutes
+firmicute<-read.csv("Firmicute1.csv",header=T)
+firmicute
+firm<-aov(Proportion~Location, data=firmicute)
+firm #Sum of Squares - Location: 1.977389 e-05, Residuals: 7.598859e-05; Deg of Freedom - Location: 2, Residuals: 3
+0.00001977389+0.00007598859 #total sum of squares
+summary(firm) #F=0.39, P=0.707
+firmAnova<-lm(Proportion~Location, data=firmicute)
+firmAnovasummary<-summary(firmAnova)
+firmAnovasummary$r.squared #0.2064889
+```
+
+```{r}
+#Fusobacteria
+fusobacteria<-read.csv("Fusobacteria1.csv",header=T)
+fusobacteria
+fuso<-aov(Proportion~Location, data=fusobacteria)
+fuso #Sum of Squares - Location: 0.0002705169, Residuals: 0.0010836918; Deg of Freedom - Location: 2, Residuals: 2
+0.0002705169+0.0010836918 #total sum of squares
+summary(fuso) #F=0.25, P=0.8
+fusoAnova<-lm(Proportion~Location, data=fusobacteria)
+fusoAnovasummary<-summary(fusoAnova)
+fusoAnovasummary$r.squared #0.1997601
+```
+
+```{r}
+#Bacteroidetes
+bacteroidetes<-read.csv("Bacteroidetes.csv",header=T)
+bacteroidetes
+bacter<-aov(Proportion~Location, data=bacteroidetes)
+bacter #Sum of Squares - Location:0.00386986, Residuals: 0.05678784, Deg of Freedom - Location: 2, Residuals: 27
+0.05678784+0.00386986 #Total sum of squares, 0.0606577 
+summary(bacter) #F= 0.92, P=0.411
+bacterAnova<-lm(Proportion~Location, data=bacteroidetes)
+bacterAnovasummary<-summary(bacterAnova)
+bacterAnovasummary$r.squared #0.06379834
+```
