@@ -169,4 +169,20 @@ plot_ordination(
 ) + 
   geom_point(aes(color=Location), alpha=0.7, size=4)+
   geom_point(colour="grey90",size=1.5)
+  
+##PERMANOVA, with updated samples (Including missing samples from Goat, 3 missing from Vermillion)
+set.seed(1)
+
+#Calculate bray-curtis distance matrix
+turtle_bray<-phyloseq::distance(turtle_scale,method="bray")
+
+#Make dataframe with sample data
+sampledf<-data.frame(sample_data(turtle))
+
+#Adonis test
+adonis(turtle_bray ~ Location, data = sampledf) #F.Model = 3.2858, RSq = 0.19575 (Location), 0.80425 (Residuals); p=0.001
+
+#Homogeneity of Dispersion Test
+beta <- betadisper(turtle_bray, sampledf$Location)
+permutest(beta) #F=4.6471, P=0.016
 ```
