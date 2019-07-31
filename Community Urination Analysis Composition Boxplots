@@ -1,0 +1,164 @@
+```{r}
+#Load Libraries
+library(ggplot2)
+library(vegan)
+library(dplyr)
+library(scales)
+library(grid)
+library(reshape2)
+library(phyloseq)
+library("ape")
+
+#Set Working Directory
+setwd("~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis")
+
+#Data Import
+sharedfile = "~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/turtle.shared"
+taxfile = "~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/turtle.taxonomy"
+mapfile = "~/Desktop/Thesis/16S Analysis/Joe's Mothur Analysis/TurtleMetadata4.csv"
+
+#Import mothur data
+mothur_data <-import_mothur(mothur_shared_file = sharedfile, mothur_constaxonomy_file = taxfile)
+
+#Import sample metadata
+map<-read.csv(mapfile)
+map
+map<-sample_data(map)
+
+#Assign rownames to be Sample ID's
+rownames(map)<-map$SampleID
+
+#Check that all row names are in mothur_data
+all(rownames(map) %in% sample_names(mothur_data))
+sample_names(mothur_data)
+```
+
+```{r}
+#Merge mothurdata object with sample metadata
+moth_merge<-merge_phyloseq(mothur_data,map)
+moth_merge
+mothsums<-sum(sample_sums(moth_merge)) #3007114
+mothdatasums<-sum(sample_sums(mothur_data))
+mothdatasums #1503557
+map
+mothur_data
+
+#Setting Phyla Level Names
+colnames(tax_table(moth_merge))
+colnames(tax_table(moth_merge))<-c("Kingdom", "Phylum","Class", "Order", "Family", "Genus")
+
+#Data Filter
+turtle<-moth_merge %>%
+  subset_taxa(
+    Kingdom == "Bacteria" &
+    Family  != "mitochondria" &
+    Class   != "Chloroplast"
+  )
+
+###Create Phy_tree element
+random_tree=rtree(ntaxa(turtle),rooted=TRUE,tip.label=taxa_names(turtle))
+plot(random_tree)
+turtleTree<-merge_phyloseq(turtle,random_tree)
+turtleTree
+plot_tree(turtleTree,color="Location",label.tips="taxa_names",ladderize="left",plot.margin=0.3)
+#Combine turtle with phy_tree
+turtle<-merge_phyloseq(turtleTree,turtle)
+turtle
+```
+
+```{r}
+###Sample Summary
+
+#Data frame with read counts
+sample_sum_df <-data.frame(sum = sample_sums(turtle))
+
+sample_sum_df
+
+smin <-min(sample_sums(turtle))
+smin #42743
+smean <-mean(sample_sums(turtle))
+smean #50118.57
+smax <-max(sample_sums(turtle))
+smax #64400
+stotal<-sum(sample_sums(turtle))
+stotal #3007114
+```
+
+```{r}
+###Stacked Barplots
+#Prune phyla below 2% in each sample
+turtle_phylum <- turtle %>%
+  tax_glom(taxrank = "Phylum") %>%
+  transform_sample_counts(function(x) {x/sum(x)} ) %>%
+  psmelt () %>%
+  filter(Abundance > 0.02) %>%
+  arrange(Phylum)
+turtletotal<-sum(sample_sums(turtle_phylum))
+
+#Creating Vermillion-only dataframe
+Vermillion_phylum<-subset(turtle_phylum, turtle_phylum$ Location =="Vermillion")
+
+#Vermillion-only barplot
+ggplot(Vermillion_phylum,aes(x=Sample,y=Abundance,fill=Phylum))+
+  scale_fill_manual(values=c("Verrucomicrobia"="cornflowerblue","Proteobacteria"="dimgrey","Planctomycetes"="darkslategray1","Patescibacteria"="orange3","Fusobacteria"="lightcoral","Firmicutes"="darkseagreen","Deinococcus-Thermus"="paleturquoise3","Cyanobacteria"="grey89","Chloroflexi"="darkolivegreen4","Bacteroidetes"="thistle3","Bacteria_unclassified"="cornsilk2","Actinobacteria"="cadetblue4","Acidobacteria"="hotpink3"))+
+  geom_bar(stat="identity")+
+  guides(fill=guide_legend(reverse=TRUE,keywidth=1,keyheight=1))+
+  xlab("Vermillion River Samples")+
+   ylab("Relative Abundance(>2%) \n")
+
+
+#Creating James River-only dataframe
+James_phylum<-subset(turtle_phylum,turtle_phylum$Location=="JimRiver")
+
+#James-only barplot
+ggplot(James_phylum,aes(x=Sample,y=Abundance,fill=Phylum))+
+  scale_fill_manual(values=c("Verrucomicrobia"="cornflowerblue","Proteobacteria"="dimgrey","Planctomycetes"="darkslategray1","Patescibacteria"="orange3","Fusobacteria"="lightcoral","Firmicutes"="darkseagreen","Deinococcus-Thermus"="paleturquoise3","Cyanobacteria"="grey89","Chloroflexi"="darkolivegreen4","Bacteroidetes"="thistle3","Bacteria_unclassified"="cornsilk2","Actinobacteria"="cadetblue4","Acidobacteria"="hotpink3"))+
+  geom_bar(stat="identity")+
+  guides(fill=guide_legend(reverse=TRUE,keywidth=1,keyheight=1))+
+  ylab("Relative Abundance(>2% \n")+
+  xlab("James River Samples")
+
+
+#Creating Goat Island-only dataframe
+Goat_phylum<-subset(turtle_phylum,turtle_phylum$Location=="Goat")
+
+#Goat-only barplot
+ggplot(Goat_phylum,aes(x=Sample,y=Abundance,fill=Phylum))+
+  scale_fill_manual(values=c("Verrucomicrobia"="cornflowerblue","Proteobacteria"="dimgrey","Planctomycetes"="darkslategray1","Patescibacteria"="orange3","Fusobacteria"="lightcoral","Firmicutes"="darkseagreen","Deinococcus-Thermus"="paleturquoise3","Cyanobacteria"="grey89","Chloroflexi"="darkolivegreen4","Bacteroidetes"="thistle3","Bacteria_unclassified"="cornsilk2","Actinobacteria"="cadetblue4","Acidobacteria"="hotpink3")+
+  geom_bar(stat="identity")+
+  guides(fill=guide_legend(reverse=TRUE,keywidth=1,keyheight=1))+
+  ylab("Relative Abundance(>2% \n")+
+  xlab("Goat Island Samples")
+
+  
+```
+
+
+```{r}
+###Creating Community Composition Charts based on Urination Patterns
+##Only James River samples
+#Creating the Boxplot for those that did urinate during sample collection
+ggplot(James_phylum,aes(x=Number,y=Abundance, fill=Phylum))+
+  scale_fill_manual(values=c("Verrucomicrobia"="cornflowerblue","Proteobacteria"="dimgrey","Planctomycetes"="darkslategray1","Patescibacteria"="orange3","Fusobacteria"="lightcoral","Firmicutes"="darkseagreen","Deinococcus-Thermus"="paleturquoise3","Cyanobacteria"="grey89","Chloroflexi"="darkolivegreen4","Bacteroidetes"="thistle3","Bacteria_unclassified"="cornsilk2","Actinobacteria"="cadetblue4","Acidobacteria"="hotpink3"))+
+  geom_bar(stat="identity")+
+  ylab("Relative Abundance (Phyla > 2%) \n")+
+  guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) +
+  xlab("Sample")+
+  scale_x_discrete(
+    breaks=c("Yes"),
+    labels=c("Yes"))+
+  scale_y_continuous(sec.axis = sec_axis(~.*5, name = "Urinated During Sampling"))+
+  xlab("Goat Island Samples")
+
+#Creating boxplot for those that didn't urinate during sample collection
+ggplot(James_phylum,aes(x=Number,y=Abundance, fill=Phylum))+
+  scale_fill_manual(values=c("Verrucomicrobia"="cornflowerblue","Proteobacteria"="dimgrey","Planctomycetes"="darkslategray1","Patescibacteria"="orange3","Fusobacteria"="lightcoral","Firmicutes"="darkseagreen","Deinococcus-Thermus"="paleturquoise3","Cyanobacteria"="grey89","Chloroflexi"="darkolivegreen4","Bacteroidetes"="thistle3","Bacteria_unclassified"="cornsilk2","Actinobacteria"="cadetblue4","Acidobacteria"="hotpink3"))+
+  geom_bar(stat="identity")+
+  ylab("Relative Abundance (Phyla > 2%) \n")+
+  guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) +
+  xlab("Sample")+
+  scale_x_discrete(
+    breaks=c("No"),
+    labels=c("No"))+
+  scale_y_continuous(sec.axis = sec_axis(~.*5, name = "Did Not Urinate During Sampling"))
+```
