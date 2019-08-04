@@ -85,7 +85,6 @@ stotal #3007114
 ```
 
 ```{r}
-###Stacked Barplots
 #Prune phyla below 2% in each sample
 turtle_phylum <- turtle %>%
   tax_glom(taxrank = "Phylum") %>%
@@ -95,42 +94,14 @@ turtle_phylum <- turtle %>%
   arrange(Phylum)
 turtletotal<-sum(sample_sums(turtle_phylum))
 
-#Creating Vermillion-only dataframe
-Vermillion_phylum<-subset(turtle_phylum, turtle_phylum$ Location =="Vermillion")
-
-#Vermillion-only barplot
-ggplot(Vermillion_phylum,aes(x=Sample,y=Abundance,fill=Phylum))+
-  scale_fill_manual(values=c("Verrucomicrobia"="cornflowerblue","Proteobacteria"="dimgrey","Planctomycetes"="darkslategray1","Patescibacteria"="orange3","Fusobacteria"="lightcoral","Firmicutes"="darkseagreen","Deinococcus-Thermus"="paleturquoise3","Cyanobacteria"="grey89","Chloroflexi"="darkolivegreen4","Bacteroidetes"="thistle3","Bacteria_unclassified"="cornsilk2","Actinobacteria"="cadetblue4","Acidobacteria"="hotpink3"))+
-  geom_bar(stat="identity")+
-  guides(fill=guide_legend(reverse=TRUE,keywidth=1,keyheight=1))+
-  xlab("Vermillion River Samples")+
-   ylab("Relative Abundance(>2%) \n")
-
-
 #Creating James River-only dataframe
 James_phylum<-subset(turtle_phylum,turtle_phylum$Location=="JimRiver")
-
-#James-only barplot
-ggplot(James_phylum,aes(x=Sample,y=Abundance,fill=Phylum))+
-  scale_fill_manual(values=c("Verrucomicrobia"="cornflowerblue","Proteobacteria"="dimgrey","Planctomycetes"="darkslategray1","Patescibacteria"="orange3","Fusobacteria"="lightcoral","Firmicutes"="darkseagreen","Deinococcus-Thermus"="paleturquoise3","Cyanobacteria"="grey89","Chloroflexi"="darkolivegreen4","Bacteroidetes"="thistle3","Bacteria_unclassified"="cornsilk2","Actinobacteria"="cadetblue4","Acidobacteria"="hotpink3"))+
-  geom_bar(stat="identity")+
-  guides(fill=guide_legend(reverse=TRUE,keywidth=1,keyheight=1))+
-  ylab("Relative Abundance(>2% \n")+
-  xlab("James River Samples")
-
-
-#Creating Goat Island-only dataframe
-Goat_phylum<-subset(turtle_phylum,turtle_phylum$Location=="Goat")
-
-#Goat-only barplot
-ggplot(Goat_phylum,aes(x=Sample,y=Abundance,fill=Phylum))+
-  scale_fill_manual(values=c("Verrucomicrobia"="cornflowerblue","Proteobacteria"="dimgrey","Planctomycetes"="darkslategray1","Patescibacteria"="orange3","Fusobacteria"="lightcoral","Firmicutes"="darkseagreen","Deinococcus-Thermus"="paleturquoise3","Cyanobacteria"="grey89","Chloroflexi"="darkolivegreen4","Bacteroidetes"="thistle3","Bacteria_unclassified"="cornsilk2","Actinobacteria"="cadetblue4","Acidobacteria"="hotpink3")+
-  geom_bar(stat="identity")+
-  guides(fill=guide_legend(reverse=TRUE,keywidth=1,keyheight=1))+
-  ylab("Relative Abundance(>2% \n")+
-  xlab("Goat Island Samples")
-
-  
+#Creating dataframes from James River df that only includes turtle samples that urinated during sampling
+James_pee_phylum<-subset(James_phylum,James_phylum$Pee=="Yes")
+James_pee_phylum
+#Df from James df for turtle samples that didn't urinate during sampling
+James_nopee_phylum<-subset(James_phylum,James_phylum$Pee=="No")
+James_nopee_phylum
 ```
 
 
@@ -138,27 +109,31 @@ ggplot(Goat_phylum,aes(x=Sample,y=Abundance,fill=Phylum))+
 ###Creating Community Composition Charts based on Urination Patterns
 ##Only James River samples
 #Creating the Boxplot for those that did urinate during sample collection
-ggplot(James_phylum,aes(x=Number,y=Abundance, fill=Phylum))+
+ggplot(James_pee_phylum,aes(x=Sample,y=Abundance, fill=Phylum))+
   scale_fill_manual(values=c("Verrucomicrobia"="cornflowerblue","Proteobacteria"="dimgrey","Planctomycetes"="darkslategray1","Patescibacteria"="orange3","Fusobacteria"="lightcoral","Firmicutes"="darkseagreen","Deinococcus-Thermus"="paleturquoise3","Cyanobacteria"="grey89","Chloroflexi"="darkolivegreen4","Bacteroidetes"="thistle3","Bacteria_unclassified"="cornsilk2","Actinobacteria"="cadetblue4","Acidobacteria"="hotpink3"))+
   geom_bar(stat="identity")+
   ylab("Relative Abundance (Phyla > 2%) \n")+
   guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) +
-  xlab("Sample")+
+  xlab("Sample ID")+
   scale_x_discrete(
     breaks=c("Yes"),
     labels=c("Yes"))+
-  scale_y_continuous(sec.axis = sec_axis(~.*5, name = "Urinated During Sampling"))+
-  xlab("Goat Island Samples")
+  scale_y_continuous(sec.axis = sec_axis(~.*5, name = "Urinated During Sampling"))
 
 #Creating boxplot for those that didn't urinate during sample collection
-ggplot(James_phylum,aes(x=Number,y=Abundance, fill=Phylum))+
+ggplot(James_nopee_phylum,aes(x=Sample,y=Abundance, fill=Phylum))+
   scale_fill_manual(values=c("Verrucomicrobia"="cornflowerblue","Proteobacteria"="dimgrey","Planctomycetes"="darkslategray1","Patescibacteria"="orange3","Fusobacteria"="lightcoral","Firmicutes"="darkseagreen","Deinococcus-Thermus"="paleturquoise3","Cyanobacteria"="grey89","Chloroflexi"="darkolivegreen4","Bacteroidetes"="thistle3","Bacteria_unclassified"="cornsilk2","Actinobacteria"="cadetblue4","Acidobacteria"="hotpink3"))+
-  geom_bar(stat="identity")+
+  geom_bar(stat="identity",width=0.9)+
   ylab("Relative Abundance (Phyla > 2%) \n")+
   guides(fill = guide_legend(reverse = TRUE, keywidth = 1, keyheight = 1)) +
-  xlab("Sample")+
+  xlab("Sample ID")+
   scale_x_discrete(
     breaks=c("No"),
     labels=c("No"))+
   scale_y_continuous(sec.axis = sec_axis(~.*5, name = "Did Not Urinate During Sampling"))
+  
+##These two figures are then combined using Microsoft Powerpoint to create one cohesive form. This route was
+##taken because it was very difficult to have the two side by side without there being gaps from where 
+##the sampleIDs from the other group were; it looked disjointed. Two separate figures then combining them 
+##was the solution.
 ```
